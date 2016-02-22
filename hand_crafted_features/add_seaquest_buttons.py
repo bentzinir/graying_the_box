@@ -18,7 +18,7 @@ def add_buttons(self):
 def update_cond_vector(self):
     shooter_x = np.asarray([row[0] for row in self.hand_craft_feats['shooter_pos']])
     shooter_y = np.asarray([row[1] for row in self.hand_craft_feats['shooter_pos']])
-    shooter_dir = self.hand_craft_feats['shooter_dir']
+    #shooter_dir = self.hand_craft_feats['shooter_dir']
     oxygen = self.hand_craft_feats['oxygen']
     nb_divers = self.hand_craft_feats['divers']
     nb_taken_divers = self.hand_craft_feats['taken_divers']
