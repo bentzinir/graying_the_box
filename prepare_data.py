@@ -3,7 +3,7 @@ from prepare_global_features import prepare_global_features
 
 def prepare_data(game_id, run_dir, num_frames, load_data, debug_mode):
 
-    # 1. switch games
+    # 1. switch games TEST
     if game_id == 0: #'breakout'
         num_actions = 4
         num_lives   = 5
