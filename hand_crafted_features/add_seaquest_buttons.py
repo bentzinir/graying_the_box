@@ -18,12 +18,12 @@ def add_buttons(self):
 def update_cond_vector(self):
     shooter_x = np.asarray([row[0] for row in self.hand_craft_feats['shooter_pos']])
     shooter_y = np.asarray([row[1] for row in self.hand_craft_feats['shooter_pos']])
-    #shooter_dir = self.hand_craft_feats['shooter_dir']
-    oxygen = self.hand_craft_feats['oxygen']
-    nb_divers = self.hand_craft_feats['divers']
-    nb_taken_divers = self.hand_craft_feats['taken_divers']
-    nb_enemies = self.hand_craft_feats['enemies']
-    nb_lives = self.hand_craft_feats['lives']
+    shooter_dir = self.hand_craft_feats['shooter_dir']
+    oxygen = np.asarray(self.hand_craft_feats['oxygen'])
+    nb_divers = np.asarray(self.hand_craft_feats['divers'])
+    nb_taken_divers = np.asarray(self.hand_craft_feats['taken_divers'])
+    nb_enemies = np.asarray(self.hand_craft_feats['enemies'])
+    nb_lives = np.asarray(self.hand_craft_feats['lives'])
 
     self.cond_vector =  (shooter_x >= self.shooter_x_min) * (shooter_x <= self.shooter_x_max) * \
                         (shooter_y >= self.shooter_y_min) * (shooter_y <= self.shooter_y_max) * \

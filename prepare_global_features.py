@@ -92,6 +92,7 @@ def prepare_global_features(data_dir, num_frames, num_actions, num_lives, grad_t
         'tsne3d_next':tsne3d_next,
         'grads':grads_hdf5,
         'trajectory_index':trajectory_index,
+        'data_dir':data_dir
         }
 
     return global_feats

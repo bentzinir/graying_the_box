@@ -37,10 +37,10 @@ def prepare_data(game_id, run_dir, num_frames, load_data, debug_mode):
     else:
         # 3.1 global features
         global_feats = prepare_global_features(data_dir, num_frames, num_actions, num_lives, grad_thresh)
-        pickle.dump(global_feats,file(data_dir + 'global_features.bin','wb'))
+        # pickle.dump(global_feats,file(data_dir + 'global_features.bin','wb'))
 
         # 3.2 hand craft features
-        hand_craft_feats = label_states(global_feats['states'], global_feats['screens'], global_feats['termination'], debug_mode=0)
-        pickle.dump(hand_craft_feats,file(data_dir + 'hand_craft_features.bin','wb'))
+        hand_craft_feats = label_states(global_feats['states'], global_feats['screens'], global_feats['termination'], debug_mode=debug_mode)
+        # pickle.dump(hand_craft_feats,file(data_dir + 'hand_craft_features.bin','wb'))
 
     return global_feats, hand_craft_feats

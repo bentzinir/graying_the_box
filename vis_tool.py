@@ -74,16 +74,6 @@ class VIS_TOOL(object):
 
         self.update_cond_vector = update_cond_vector
 
-    def FW(self,event):
-        self.ind = (self.ind + 1) % self.num_points
-        self.update_plot()
-        self.prev_ind = self.ind
-
-    def BW(self,event):
-        self.ind = (self.ind - 1) % self.num_points
-        self.update_plot()
-        self.prev_ind = self.ind
-
     def add_color_button(self, pos, name, color):
         def set_color(event):
             color = self.COLORS[id(event.inaxes)]
@@ -139,14 +129,7 @@ class VIS_TOOL(object):
         sizes[self.prev_ind] = self.pnt_size
         self.tsne_scat.set_sizes(sizes)
         self.fig.canvas.draw()
-        print self.ind
-
-    def set_color_by_cond(self,event):
-        self.update_cond_vector(self)
-        self.tsne_scat.set_array(self.cond_vector)
-        sizes = 5 * self.cond_vector + self.pnt_size * np.ones_like(self.tsne_scat.get_sizes())
-        self.tsne_scat.set_sizes(sizes)
-        print ('number of valid points: %d') % (np.sum(self.cond_vector))
+        print 'chosen point: %d' % self.ind
 
     def show(self):
         plt.show(block=True)
