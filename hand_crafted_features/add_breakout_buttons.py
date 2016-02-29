@@ -33,7 +33,7 @@ def update_cond_vector(self):
 
     ball_x = np.asarray([row[0] for row in self.hand_craft_feats['ball_pos']])
     ball_y = np.asarray([row[1] for row in self.hand_craft_feats['ball_pos']])
-    ball_dir = self.hand_craft_feats['ball_dir']
+    ball_dir = np.asarray(self.hand_craft_feats['ball_dir'])
     racket_x = np.asarray(self.hand_craft_feats['racket'])
     missing_bricks = np.asarray(self.hand_craft_feats['missing_bricks'])
     has_hole = np.asarray(self.hand_craft_feats['hole'])
