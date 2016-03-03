@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, Slider, CheckButtons
 from add_global_features import add_buttons as add_global_buttons
+from control_buttons import add_buttons as add_control_buttons
 import common
 
 class VIS_TOOL(object):
@@ -61,6 +62,9 @@ class VIS_TOOL(object):
 
         # 3. Global Features
         add_global_buttons(self, global_feats)
+
+        # 4. Control buttons
+        add_control_buttons(self)
 
         # 4.1 add game buttons
         if game_id == 0: # breakout
