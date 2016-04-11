@@ -7,7 +7,7 @@ import common
 
 class VIS_TOOL(object):
 
-    def __init__(self, global_feats, hand_craft_feats, game_id):
+    def __init__(self, global_feats, hand_craft_feats, game_id, cluster_params):
 
         # 0. connect arguments
         self.global_feats = global_feats
@@ -23,9 +23,10 @@ class VIS_TOOL(object):
         self.traj_index = global_feats['trajectory_index']
         self.tsne3d_norm = global_feats['tsne3d_norm']
         self.color = global_feats['value']
+        self.cluster_params = cluster_params
 
         # 1. Constants
-        self.pnt_size = 1.5
+        self.pnt_size = 2
         self.ind      = 0
         self.prev_ind = 0
 
@@ -68,13 +69,13 @@ class VIS_TOOL(object):
 
         # 4.1 add game buttons
         if game_id == 0: # breakout
-            from add_breakout_buttons import add_buttons, update_cond_vector
+            from add_breakout_buttons import add_game_buttons, update_cond_vector
         if game_id == 1: # seaquest
-            from add_seaquest_buttons import add_buttons, update_cond_vector
+            from add_seaquest_buttons import add_game_buttons, update_cond_vector
         if game_id == 2: # pacman
-            from add_pacman_buttons import add_buttons, update_cond_vector
+            from add_pacman_buttons import add_game_buttons, update_cond_vector
 
-        add_buttons(self)
+        add_game_buttons(self)
 
         self.update_cond_vector = update_cond_vector
 
