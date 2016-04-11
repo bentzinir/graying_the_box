@@ -1,13 +1,13 @@
 import numpy as np
 
-def add_buttons(self):
+def add_game_buttons(self, top_y=0.69, x_left = 0.68):
 
-    self.add_slider_button([0.70, 0.70, 0.08, 0.01], 'ball_x', 0, 160)
-    self.add_slider_button([0.70, 0.65, 0.08, 0.01], 'ball_y', 0, 210)
-    self.add_slider_button([0.70, 0.60, 0.08, 0.01], 'racket_x', 0, 160)
-    self.add_slider_button([0.70, 0.55, 0.08, 0.01], 'missing_bricks', 0, 130)
-    self.add_check_button([0.70, 0.50, 0.06, 0.04], 'hole', ('no-hole','hole'), (True,True))
-    self.add_check_button([0.70, 0.38, 0.07, 0.08], 'ball_dir', ('down-right','up-right','down-left','up-left'), (True,True,True,True))
+    self.add_slider_button([x_left, top_y, 0.08, 0.01], 'ball_x', 0, 160)
+    self.add_slider_button([x_left, top_y-0.04, 0.08, 0.01], 'ball_y', 0, 210)
+    self.add_slider_button([x_left, top_y-0.08, 0.08, 0.01], 'racket_x', 0, 160)
+    self.add_slider_button([x_left, top_y-0.12, 0.08, 0.01], 'missing_bricks', 0, 130)
+    self.add_check_button([x_left, top_y-0.20, 0.06, 0.04], 'hole', ('no-hole','hole'), (True,True))
+    self.add_check_button([x_left, top_y-0.30, 0.07, 0.08], 'ball_dir', ('down-right','up-right','down-left','up-left'), (True,True,True,True))
     self.ball_dir_mat = np.zeros(shape=(self.num_points,4), dtype='bool')
     for i,dir in enumerate(self.hand_craft_feats['ball_dir']):
         self.ball_dir_mat[i,int(dir)] = 1

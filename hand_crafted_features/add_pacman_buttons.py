@@ -2,15 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 
-def add_buttons(self):
-    self.add_slider_button([0.70, 0.70, 0.08, 0.01], 'player_x', 0, 160)
-    self.add_slider_button([0.70, 0.66, 0.08, 0.01], 'player_y', 0, 210)
-    self.add_slider_button([0.70, 0.62, 0.08, 0.01], 'bricks', 0, 121)
-    self.add_slider_button([0.70, 0.58, 0.08, 0.01], 'enemy_distance', 0, 160+210)
-    self.add_slider_button([0.70, 0.54, 0.08, 0.01], 'lives', 0, 3)
-    self.add_check_button([0.70, 0.48, 0.06, 0.03], 'ghost', ('no-ghost','ghost'), (True,True))
-    self.add_check_button([0.70, 0.44, 0.06, 0.03], 'box', ('no-box','box'), (True,True))
-    self.add_check_button([0.70, 0.35, 0.07, 0.08], 'player_dir', ('stand','right','left','bottom','top'), (True, True, True, True, True))
+def add_game_buttons(self, top_y=0.69, x_left = 0.68):
+    self.add_slider_button([x_left, top_y, 0.08, 0.01], 'player_x', 0, 160)
+    self.add_slider_button([x_left, top_y-0.04, 0.08, 0.01], 'player_y', 0, 210)
+    self.add_slider_button([x_left, top_y-0.08, 0.08, 0.01], 'bricks', 0, 121)
+    self.add_slider_button([x_left, top_y-0.12, 0.08, 0.01], 'enemy_distance', 0, 160+210)
+    self.add_slider_button([x_left, top_y-0.16, 0.08, 0.01], 'lives', 0, 3)
+    self.add_check_button([x_left, top_y-0.22, 0.06, 0.03], 'ghost', ('no-ghost','ghost'), (True,True))
+    self.add_check_button([x_left, top_y-0.26, 0.06, 0.03], 'box', ('no-box','box'), (True,True))
+    self.add_check_button([x_left, top_y-0.35, 0.07, 0.08], 'player_dir', ('stand','right','left','bottom','top'), (True, True, True, True, True))
     self.player_dir_mat = np.zeros(shape=(self.num_points,5), dtype='bool')
     for i,dir in enumerate(self.hand_craft_feats['player_dir']):
         self.player_dir_mat[i,int(dir)] = 1

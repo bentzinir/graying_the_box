@@ -1,14 +1,14 @@
 import  numpy as np
 
-def add_buttons(self):
-    self.add_slider_button([0.70, 0.70, 0.08, 0.01], 'shooter_x', 0, 160)
-    self.add_slider_button([0.70, 0.66, 0.08, 0.01], 'shooter_y', 0, 210)
-    self.add_slider_button([0.70, 0.62, 0.08, 0.01], 'oxygen', 0, 1)
-    self.add_slider_button([0.70, 0.58, 0.08, 0.01], 'divers', 0, 6)
-    self.add_slider_button([0.70, 0.54, 0.08, 0.01], 'taken_divers', 0, 3)
-    self.add_slider_button([0.70, 0.50, 0.08, 0.01], 'enemies', 0, 8)
-    self.add_slider_button([0.70, 0.46, 0.08, 0.01], 'lives', 0, 3)
-    self.add_check_button([0.70, 0.38, 0.06, 0.04], 'shooter_dir', ('dont-care','down','up'), (True, True, True))
+def add_game_buttons(self, top_y=0.69, x_left = 0.68):
+    self.add_slider_button([x_left, top_y , 0.08, 0.01], 'shooter_x', 0, 160)
+    self.add_slider_button([x_left, top_y-0.04 , 0.08, 0.01], 'shooter_y', 0, 210)
+    self.add_slider_button([x_left, top_y-0.08 , 0.08, 0.01], 'oxygen', 0, 1)
+    self.add_slider_button([x_left, top_y-0.12 , 0.08, 0.01], 'divers', 0, 6)
+    self.add_slider_button([x_left, top_y-0.16 , 0.08, 0.01], 'taken_divers', 0, 3)
+    self.add_slider_button([x_left, top_y-0.20 , 0.08, 0.01], 'enemies', 0, 8)
+    self.add_slider_button([x_left, top_y-0.24 , 0.08, 0.01], 'lives', 0, 3)
+    self.add_check_button([x_left, top_y-0.32 , 0.06, 0.04], 'shooter_dir', ('dont-care','down','up'), (True, True, True))
 
     self.shooter_dir_mat = np.zeros(shape=(self.num_points,3), dtype='bool')
 
