@@ -7,13 +7,20 @@ from vis_tool import VIS_TOOL
 
 # Parameters
 run_dir = '120k'
-num_frames = 200
-game_id = 1 # 0-breakout, 1-seaquest, 2-pacman
+num_frames = 120000
+game_id = 0 # 0-breakout, 1-seaquest, 2-pacman
 load_data = 0
 debug_mode = 0
-
+cluster_method = 0 # 0-kmeans, 1-spectral_clustering, 2-agglomerative clustering
+n_clusters = 20
+window_size = 3
+cluster_params = {
+    'method': cluster_method,
+    'n_clusters': n_clusters,
+    'window_size': window_size
+}
 global_feats, hand_crafted_feats = prepare_data(game_id, run_dir, num_frames, load_data, debug_mode)
 
-vis_tool = VIS_TOOL(global_feats=global_feats, hand_craft_feats=hand_crafted_feats, game_id=game_id)
+vis_tool = VIS_TOOL(global_feats=global_feats, hand_craft_feats=hand_crafted_feats, game_id=game_id, cluster_params=cluster_params)
 
 vis_tool.show()
