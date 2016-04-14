@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.linalg
 import itertools
+import sys
 
 class EMHC(object):
     def __init__ (self, X, termination, labels=None, min_clusters=2, max_entropy=5, w_entropy=1, w_distance=1):
@@ -181,6 +182,8 @@ class EMHC(object):
                 else:
                     self.TT[self.labels_[i], self.labels_[i+1]] += 1
             self.TT[self.labels_[-1], self.labels_[-1]] += 1
+            if (np.any(self.TT.sum(axis=1)==0)):
+                a=1
 
     def init_cluster_sizes(self):
         if self.labels_ is None:
@@ -192,11 +195,14 @@ class EMHC(object):
         self.e = np.zeros(self.n_clusters)
         if self.labels_ is not None:
             for i in xrange(self.n_clusters):
-                TTi = self.TT[i]
+                TTi = np.copy(self.TT[i])
                 TTi[i] = 0
                 ei = scipy.stats.entropy(TTi/TTi.sum())
                 if np.isnan(ei):
                     ei = 0
+                if np.isinf(ei):
+                    print 'entropy is -inf. exiting'
+                    sys.exit()
                 self.e[i] = ei
 
     def init_D(self):
