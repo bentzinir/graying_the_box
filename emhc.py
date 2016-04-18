@@ -9,10 +9,10 @@ class EMHC(object):
         # TODO
 
         # DEBUG
-        # N = 500
-        # X = X[:N]
-        # termination = termination[:N]
-        # labels = np.random.randint(low=0, high=300, size=N)
+        N = 500
+        X = X[:N]
+        termination = termination[:N]
+        labels = np.random.randint(low=0, high=300, size=N)
 
         # 2. remove last point (it is loaded with zeros)
         self.X = X[:-1,:]
@@ -192,7 +192,7 @@ class EMHC(object):
         self.e = np.zeros(self.n_clusters)
         if self.labels_ is not None:
             for i in xrange(self.n_clusters):
-                TTi = self.TT[i]
+                TTi = np.copy(self.TT[i])
                 TTi[i] = 0
                 ei = scipy.stats.entropy(TTi/TTi.sum())
                 if np.isnan(ei):
@@ -318,7 +318,7 @@ class EMHC(object):
 
     def update_entropy(self):
         for i in self.change_list:
-            TTi = self.TT[i]
+            TTi = np.copy(self.TT[i])
             TTi[i] = 0
             TTi_normalized = TTi/TTi.sum()
             self.e[i] = scipy.stats.entropy(TTi_normalized)
@@ -369,7 +369,7 @@ class EMHC(object):
                 d_ent = 0
 
                 # 4.1 add entropy of the newly created cluster
-                cij_line = TTij[i_reduced]
+                cij_line = np.copy(TTij[i_reduced])
                 cij_line[i_reduced] = 0
                 eij = scipy.stats.entropy(cij_line/cij_line.sum())
                 if np.isnan(eij):
@@ -386,7 +386,7 @@ class EMHC(object):
 
                 # 2.4 add new entropy of all clusters pointing to i,j
                 for l in (in_list_reduced):
-                    TTij_l = TTij[l]
+                    TTij_l = np.copy(TTij[l])
                     TTij_l[l] = 0
                     eij_l = scipy.stats.entropy(TTij_l/TTij_l.sum())
                     if np.isnan(eij_l):
