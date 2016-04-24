@@ -66,6 +66,10 @@ class EMHC(object):
     def fit(self):
         while self.n_clusters > self.min_clusters and self.mean_wighted_entropy() < self.max_entropy:
             print 'n_clusters: %d, entropy: %f' % (self.n_clusters, self.mean_wighted_entropy())
+            print '(i,j): (%d,%d)' % (self.i_min, self.j_min)
+
+            assert(self.i_min!=self.j_min)
+            assert(self.i_min<self.SCORE.shape[0]-1)
 
             # 10.0 decrease number of clusters by 1
             self.n_clusters -= 1
@@ -91,7 +95,9 @@ class EMHC(object):
             self.update_entropy()
 
             # 10.7 update pairwise entropy gain matrix EG
-            self.update_pw_ent_gain_mat(self.change_list)
+            # self.update_pw_ent_gain_mat(self.change_list)
+            # DEBUG: check if we bug exists in the fast entropy gain matrix by comparing to full calculation
+            self.update_pw_ent_gain_mat_full()
 
             # 10.8 update pairwise distance matrix D
             self.update_pw_distances_mat()
@@ -101,9 +107,6 @@ class EMHC(object):
 
             # 10.10 update best pair
             self.i_min, self.j_min = np.unravel_index(np.argmin(self.SCORE), self.SCORE.shape)
-
-            assert(self.i_min!=self.j_min)
-            assert(self.i_min<self.SCORE.shape[0]-1)
 
         # 11. assign labels
         for i, cluster in enumerate(self.member_list):
@@ -149,7 +152,11 @@ class EMHC(object):
         k = 0
         for pair in itertools.product(self.member_list[i], self.member_list[j]):
             # d_pair = self.dist(*pair)
-            d_pair = self.ED[pair[0],pair[1]]
+            if pair[0]<pair[1]:
+                d_pair = self.ED[pair[0],pair[1]]
+            else:
+                d_pair = self.ED[pair[1],pair[0]]
+
             d += d_pair
             k += 1
         mean_dist = d/k
@@ -427,15 +434,24 @@ class EMHC(object):
             self.EG = np.delete(self.EG, self.j_min, axis=0)
             self.EG = np.delete(self.EG, self.j_min, axis=1)
 
-        for i in self.n_clusters:
+        for i in xrange(self.n_clusters):
             for j in xrange(i + 1, self.n_clusters):
 
                 # 1. create TT matrix based on i,j union
                 TTij = self.unite_rows_cols(self.TT, i, j)
                 TTij[np.diag_indices(TTij.shape[0])] = 0
 
+                sij = np.copy(self.s)
+                sij[i] += sij[j]
+                sij = np.delete(sij,j)
+
                 # 2. calculate entropy
-                eij = (self.s[i]+self.s[j]) * scipy.stats.entropy(TTij/TTij.sum(axis=1)[:,np.newaxis])
+                TTij_normal = TTij/TTij.sum(axis=1)[:,np.newaxis]
+                # eij = np.sum(scipy.stats.entropy(TTij_normal.T) * sij)
+                eij = np.average(a=scipy.stats.entropy(TTij_normal.T), weights=sij)
+
+                if np.isinf(eij) or np.isnan(eij):
+                    eij = 0
 
                 # 3.2 decrease i
                 if i>j:
@@ -450,13 +466,12 @@ class EMHC(object):
         self.CD = np.delete(self.CD, self.j_min, axis=0)
         self.CD = np.delete(self.CD, self.j_min, axis=1)
 
-        for i in self.change_list:
-            for j in xrange(self.n_clusters):
-                if i == j:
-                    continue
+        for j in xrange(self.n_clusters):
+            if j == self.i_min:
+                continue
 
-                d_pair = self.clusters_dist(i,j)
-                if j>i:
-                    self.CD[i,j] = d_pair
-                else:
-                    self.CD[j,i] = d_pair
+            d_pair = self.clusters_dist(self.i_min,j)
+            if j>self.i_min:
+                self.CD[self.i_min,j] = d_pair
+            else:
+                self.CD[j,self.i_min] = d_pair
