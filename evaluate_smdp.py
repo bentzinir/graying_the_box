@@ -1,6 +1,11 @@
 import numpy as np
 import scipy.linalg
 
+def divide_tt(X, tt_ratio):
+    N = X.shape[0]
+    X_train = X[:int(tt_ratio*N)]
+    X_test = X[int(tt_ratio*N):]
+    return X_train, X_test
 
 def calculate_transition_matrix(termination, labels, n_clusters):
     TT = np.zeros((n_clusters, n_clusters))
@@ -15,14 +20,18 @@ def calculate_transition_matrix(termination, labels, n_clusters):
 def entropy_inertia(termination, labels, n_clusters):
     T_mat, TT_mat = calculate_transition_matrix(termination, labels, n_clusters)
     entropy = scipy.stats.entropy(T_mat.T)
-    entropy[np.isnan(entropy) or np.isinf(entropy)] = 0
+    entropy[np.nonzero(np.isnan(entropy))] = 0
+    entropy[np.nonzero(np.isinf(entropy))] = 0
     weighted_entropy = np.average(a=entropy, weights=TT_mat.sum(axis=1))
-    print 'Entropy/Inertia score: %f' % weighted_entropy
+    return weighted_entropy
 
-def reward_coherency(rewards_train, labels_train, rewards_test, labels_test, n_clusters):
+def reward_coherency(rewards, labels, n_clusters, tt_ratio):
+    # 0. divide data into train/test
+    rewards_train, rewards_test = divide_tt(rewards, tt_ratio)
+    labels_train, labels_test = divide_tt(labels, tt_ratio)
 
     # 1. evaluate train reward statistics
-    train_vec = np.zeros(n_clusters,2)
+    train_vec = np.zeros(shape=(n_clusters,2))
     for i,(l,r) in enumerate(zip(labels_train,rewards_train)):
         train_vec[l, 0] += r
         train_vec[l, 1] += 1
@@ -31,76 +40,92 @@ def reward_coherency(rewards_train, labels_train, rewards_test, labels_test, n_c
     for t in train_vec:
         t[0] = t[0]/t[1]
 
-    # 2. evaluate test reward statistics
-    test_vec = np.zeros(n_clusters, 2)
+    # 2. variance of test rewards with respect to the average train reward
+    total_var = 0
     for i, (l, r) in enumerate(zip(labels_test, rewards_test)):
-        test_vec[l, 0] += r
-        test_vec[l, 1] += 1
+        total_var += (r-train_vec[l,0])**2
 
-    # 2.5 normalize rewards
-    for t in test_vec:
-        t[0] = t[0] / t[1]
+    likelihood = - total_var / labels_test.shape[0]
 
-    # 3. score: square differences between train/test estimations of reward. weighted by test sample size
-    score = np.average(a=(train_vec[:,0]-test_vec[:,0])**2,weights=test_vec[:,1])
+    return likelihood
 
-    print 'In-state reward score: %f' % score
+def traj_coherency(rewards, labels, n_clusters, tt_ratio, gamma):
+    # 0. divide data into train/test
+    rewards_train, rewards_test = divide_tt(rewards, tt_ratio)
+    labels_train, labels_test = divide_tt(labels, tt_ratio)
 
-def traj_coherency(rewards_train, labels_train, rewards_test, labels_test, n_clusters):
+    # 1. helper function
+    def avg_traj_reward_estimation(rewards, labels, test_mode, stats_vec=None):
+        l_p = labels[0]
+        total_r = rewards[0]
+        t = 0
+        total_var = 0
+        k = 0
 
-    def get_traj_reward_estimation(rewards, labels):
-        vec = np.zeros(n_clusters, 2)
-        l_p = labels_train[0]
-        total_r = rewards_train[0]
+        if not test_mode:
+            stats_vec = np.zeros(shape=(n_clusters, 2))
+
         for i, (l, r) in enumerate(zip(labels[1:], rewards[1:])):
-            if l != l_p:
-                vec[l_p,0] += total_r
-                vec[l_p, 1] += 1
-                l_p = l
-                total_r = r
+            if l == l_p:
+                total_r += gamma**t * r
+                t += 1
             else:
-                total_r += r
+                if test_mode:
+                    total_var += (total_r - stats_vec[l_p,0])**2
+                    k += 1
+                else:
+                    stats_vec[l_p,0] += total_r
+                    stats_vec[l_p,1] += 1
+                    l_p = l
+                    total_r = r
+                    t = 1
 
-        for t in vec:
+        for t in stats_vec:
             t[0] = t[0] / t[1]
 
-        return vec
+        if test_mode:
+            return total_var / k
+        else:
+            return stats_vec
 
-    # 1. evaluate train
-    train_vec = get_traj_reward_estimation(rewards_train, labels_train)
+    # 2. evaluate train trajectory reward
+    mean_vec = avg_traj_reward_estimation(rewards_train, labels_train, test_mode=0)
 
     # 2. evaluate test
-    test_vec = get_traj_reward_estimation(rewards_test, labels_test)
+    reward_traj_var = avg_traj_reward_estimation(rewards_test, labels_test, test_mode=1, stats_vec=mean_vec)
 
-    # 3. score: square difference between train/test estimations of trajectory rewards. weighted by test sample size
-    score = np.average(a=(train_vec[:, 0] - test_vec[:, 0]) ** 2, weights=test_vec[:, 1])
+    likelihood = - reward_traj_var
 
-    print 'In-state trajectory reward score: %f' % score
+    return likelihood
 
-def transition_coherency(labels_train, termination_train, labels_test, termination_test, n_clusters):
+def transition_coherency(labels, termination, n_clusters, tt_ratio):
+    # 0. divide data into train/test
+    term_train, term_test = divide_tt(termination, tt_ratio)
+    labels_train, labels_test = divide_tt(labels, tt_ratio)
+
     # 1. create train TT matrix
-    T_train, _ = calculate_transition_matrix(termination_train, labels_train, n_clusters)
+    T_train, _ = calculate_transition_matrix(term_train, labels_train, n_clusters)
 
-    # 2. create test TT matrix
-    T_test, _ = calculate_transition_matrix(termination_test, labels_test, n_clusters)
+    # 2. play unseen tranjectory
+    likelihood = 0
+    k = 1
+    for i in labels_test[:-1]:
+        if labels_test[i] != labels_test[i+1]:
+            likelihood += np.log(T_train[labels_test[i],labels_test[i+1]])
+            k += 1
 
-    # 3. calculate KL divergence between each state in train and test
-    KL_vec = np.zeros(n_clusters)
-    for i, (t_train,t_test) in enumerate(zip(T_train,T_test)):
-        KL_vec[i] = scipy.stats.entropy(pk=t_test,qk=t_train)
+    likelihood = likelihood / k
 
-    # 4. score: square weighted average of KL divergence values weighted by test cluster sizes
-    score = np.average(a=KL_vec, weights=T_test.sum(axis=1))
+    return likelihood
 
-    print 'Transition coherency score: %f' % score
+def evaluate_smdp(method, rewards, labels, termination, n_clusters):
+    tt_ratio = 0.8
+    gamma = 0.99
+    likelihood_measures = []
+    # likelihood_measures.append(entropy_inertia(termination, labels, n_clusters))
+    likelihood_measures.append(reward_coherency(rewards, labels, n_clusters, tt_ratio))
+    likelihood_measures.append(traj_coherency(rewards, labels, n_clusters, tt_ratio, gamma))
+    likelihood_measures.append(transition_coherency(labels, termination, n_clusters, tt_ratio))
 
-def evaluate_smdp(method, rewards_train, labels_train, termination_train, rewards_test, labels_test, termination_test, n_clusters):
-    switcher = {
-        0: entropy_inertia(termination_test, labels_test),
-        1: reward_coherency(rewards_train, labels_train, rewards_test, labels_test, n_clusters),
-        2: traj_coherency(labels_train, termination_train, labels_test, termination_test, n_clusters),
-        3: transition_coherency(labels_train, termination_train, labels_test, termination_test, n_clusters),
-    }
-
-    return switcher.get(method)
+    return likelihood_measures
 
