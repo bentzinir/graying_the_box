@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.signal
 import scipy.ndimage
 
-def label_states(states, screens, termination_mat, debug_mode):
+def label_states(states, screens, termination_mat, debug_mode, num_lives):
 
     screens = np.reshape(np.transpose(screens), (3,210,160,-1))
 

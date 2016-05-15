@@ -6,18 +6,23 @@ from prepare_data import prepare_data
 from vis_tool import VIS_TOOL
 
 # Parameters
-run_dir = '120k'
-num_frames = 120000
-game_id = 0 # 0-breakout, 1-seaquest, 2-pacman
-load_data = 0
-debug_mode = 0
-cluster_method = 0 # 0-kmeans, 1-spectral_clustering, 2-agglomerative clustering
-n_clusters = 20
-window_size = 3
+run_dir         = '120k'
+num_frames      = 10000
+game_id         = 0 # 0-breakout, 1-seaquest, 2-pacman
+load_data       = 0
+debug_mode      = 0
+cluster_method  = 0 # 0-kmeans, 1-spectral_clustering, 2-EMHC (entropy minimization hierarchical clustering)
+n_clusters      = 22
+window_size     = 7
+n_iters         = 8
+entropy_iters   = 0
+
 cluster_params = {
     'method': cluster_method,
     'n_clusters': n_clusters,
-    'window_size': window_size
+    'window_size': window_size,
+    'n_iters':n_iters,
+    'entropy_iters': entropy_iters
 }
 global_feats, hand_crafted_feats = prepare_data(game_id, run_dir, num_frames, load_data, debug_mode)
 

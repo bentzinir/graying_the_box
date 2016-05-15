@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def label_states(states, screens, termination_mat, debug_mode):
-
+def label_states(states, screens, termination_mat, debug_mode, num_lives):
 
     im_size = np.sqrt(states.shape[1])
     states = np.reshape(states, (states.shape[0], im_size, im_size)).astype('int16')
@@ -42,6 +41,7 @@ def label_states(states, screens, termination_mat, debug_mode):
 
     traj_id = 0
     time = 0
+    strike_counter = 0
     s_ = screens[1]
     for i,s in enumerate(screens[2:]):
 
@@ -91,14 +91,16 @@ def label_states(states, screens, termination_mat, debug_mode):
 
         #6. traj_id
         if termination_mat[i] > 0:
-            traj_id += 1
-            time = 0
+            strike_counter+=1
+            if strike_counter%num_lives==0:
+                traj_id += 1
+                time = 0
         time += 1
 
         if debug_mode:
             screen_plt.set_data(s)
-            buf_line = ('Exqample %d: ball pos (x,y): (%0.2f, %0.2f), ball direct: %d, racket pos: (%0.2f), number of missing bricks: %d, has a hole: %d') % \
-                       (i, ball_x, ball_y, ball_dir, racket_x, missing_bricks, has_hole)
+            buf_line = ('Exqample %d: ball pos (x,y): (%0.2f, %0.2f), ball direct: %d, racket pos: (%0.2f), number of missing bricks: %d, has a hole: %d, traj id: %d, time: %d, st_cnt: %d') % \
+                       (i, ball_x, ball_y, ball_dir, racket_x, missing_bricks, has_hole, traj_id, time, strike_counter)
             print buf_line
             plt.pause(0.001)
 
@@ -111,5 +113,6 @@ def label_states(states, screens, termination_mat, debug_mode):
         features['hole'].append(has_hole)
         features['traj'].append(traj_id)
         features['time'].append(time)
+        features['n_trajs'] = traj_id
 
     return features

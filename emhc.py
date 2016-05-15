@@ -15,6 +15,12 @@ class EMHC(object):
         # termination = termination[:N]
         # labels = np.random.randint(low=0, high=300, size=N)
 
+        # debug
+        # X = np.zeros((11,3))
+        # X[:5,:] = np.random.normal(loc=0,size=(5,3))
+        # X[5:,:] = np.random.normal(loc=100,size=(6,3))
+        # labels = np.asarray([x for x in xrange(11)])
+
         # 2. remove last point (it is loaded with zeros)
         self.X = X[:-1,:]
         self.termination = termination[:-1]
@@ -64,9 +70,12 @@ class EMHC(object):
 
     # 10. fit function
     def fit(self):
+        self.models_likelihood = [[],[]]
         while self.n_clusters > self.min_clusters and self.mean_wighted_entropy() < self.max_entropy:
             print 'n_clusters: %d, entropy: %f' % (self.n_clusters, self.mean_wighted_entropy())
-            print '(i,j): (%d,%d)' % (self.i_min, self.j_min)
+            # print '(i,j): (%d,%d)' % (self.i_min, self.j_min)
+            self.models_likelihood[0].append(self.n_clusters)
+            self.models_likelihood[1].append(self.mean_wighted_entropy())
 
             assert(self.i_min!=self.j_min)
             assert(self.i_min<self.SCORE.shape[0]-1)
@@ -406,14 +415,14 @@ class EMHC(object):
                 if np.isnan(eij) or np.isinf(eij):
                     eij = 0
 
-                d_ent += (self.s[i]+self.s[j]) * eij
+                d_ent += eij # * (self.s[i]+self.s[j])
 
                 # 4.2 remove old entropy of i,j
-                d_ent -= self.s[i] * self.e[i]
-                d_ent -= self.s[j] * self.e[j]
+                d_ent -= self.e[i] # * self.s[i]
+                d_ent -= self.e[j] # * self.s[j]
 
                 # 4.3 remove old entropy of all clusters pointing to i,j
-                d_ent -= np.sum(self.s[in_list] * self.e[in_list])
+                d_ent -= np.sum(self.e[in_list] ) # * self.s[in_list] )
 
                 # 2.4 add new entropy of all clusters pointing to i,j
                 for l in (in_list_reduced):
@@ -422,7 +431,7 @@ class EMHC(object):
                     eij_l = scipy.stats.entropy(TTij_l/TTij_l.sum())
                     if np.isnan(eij_l):
                         eij_l = 0
-                    d_ent += TTij[l].sum() * eij_l
+                    d_ent += eij_l # * TTij[l].sum()
 
                 if j>i:
                     self.EG[i,j] = d_ent
@@ -448,7 +457,11 @@ class EMHC(object):
                 # 2. calculate entropy
                 TTij_normal = TTij/TTij.sum(axis=1)[:,np.newaxis]
                 # eij = np.sum(scipy.stats.entropy(TTij_normal.T) * sij)
-                eij = np.average(a=scipy.stats.entropy(TTij_normal.T), weights=sij)
+                ent = scipy.stats.entropy(TTij_normal.T)
+                ent[np.nonzero(np.isinf(ent))] = 0
+                ent[np.nonzero(np.isnan(ent))] = 0
+                # eij = np.average(a=ent, weights=sij)
+                eij = np.sum(ent)
 
                 if np.isinf(eij) or np.isnan(eij):
                     eij = 0

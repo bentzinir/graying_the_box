@@ -65,14 +65,8 @@ def prepare_global_features(data_dir, num_frames, num_actions, num_lives, grad_t
 
     Advantage = V-Q.T
     risk = np.sum(Advantage,axis=0)
-    risk = risk/risk.max()
-    reward = reward/reward.max()
-    Advantage = Advantage/Advantage.max()
-    TD = TD/TD.max()
-    V = V/V.max()
-    a = a/a.max()
-    term = term/(term.max() + 1e-4)
-    time = time/time.max()
+    term_binary = term
+    term_binary[np.nonzero(term_binary!=0)]=1
 
     global_feats = {
         'tsne': tsne,
@@ -80,7 +74,7 @@ def prepare_global_features(data_dir, num_frames, num_actions, num_lives, grad_t
         'screens':screens_hdf5,
         'value':V,
         'actions':a,
-        'termination':term,
+        'termination':term_binary,
         'risk':risk,
         'tsne3d':tsne3d,
         'tsne3d_norm':tsne3d_norm,

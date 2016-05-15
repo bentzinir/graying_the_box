@@ -11,6 +11,7 @@ class VIS_TOOL(object):
 
         # 0. connect arguments
         self.global_feats = global_feats
+        self.game_id = game_id
         self.hand_craft_feats = hand_craft_feats
         self.num_points = global_feats['tsne'].shape[0]
         self.data_t = global_feats['tsne'].T
@@ -22,7 +23,7 @@ class VIS_TOOL(object):
         self.tsnedata = global_feats['tsne3d'].T
         self.traj_index = global_feats['trajectory_index']
         self.tsne3d_norm = global_feats['tsne3d_norm']
-        self.color = global_feats['value']
+        self.color = global_feats['value'] / global_feats['value'].max()
         self.cluster_params = cluster_params
 
         # 1. Constants
@@ -44,6 +45,11 @@ class VIS_TOOL(object):
 
         self.ax_tsne.set_xticklabels([])
         self.ax_tsne.set_yticklabels([])
+
+        # 2.1.5 colorbar
+        cb_axes = self.fig.add_axes([0.253,0.13,0.2,0.01])
+        cbar = self.fig.colorbar(self.tsne_scat, cax=cb_axes, orientation='horizontal', ticks=[0,1])
+        cbar.ax.set_xticklabels(['Low','High'])
 
         # 2.2 game screen (state)
         self.ax_screen = plt.subplot2grid((3,5),(2,3), rowspan=1, colspan=1)
@@ -81,13 +87,13 @@ class VIS_TOOL(object):
 
     def add_color_button(self, pos, name, color):
         def set_color(event):
-            color = self.COLORS[id(event.inaxes)]
-            self.tsne_scat.set_array(color)
+            self.color = self.COLORS[id(event.inaxes)]
+            self.tsne_scat.set_array(self.color)
 
         ax = plt.axes(pos)
         setattr(self, name+'_button', Button(ax, name))
         getattr(self, name+'_button').on_clicked(set_color)
-        self.COLORS[id(ax)] = color
+        self.COLORS[id(ax)] = color/color.max()
 
     def update_sliders(self, val):
         for f in self.SLIDER_FUNCS:
