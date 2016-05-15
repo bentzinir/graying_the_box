@@ -1,19 +1,19 @@
-import h5py
+# import h5py
 import numpy as np
 import matplotlib.pyplot as plt
-# import scipy.stats.entropy as entropy
+import scipy.stats
 from smdp import SMDP
 
-def load_hdf5(object_name, path, num_frames=None):
-    print "    Loading " +  object_name
-    obj_file = h5py.File(path + object_name + '.h5', 'r')
-    obj_mat = obj_file['data']
-    return obj_mat[:num_frames]
-
-def save_hdf5(object_name, path, object):
-    print "    Saving " +  object_name
-    with h5py.File(path + object_name +'.h5', 'w') as hf:
-        hf.create_dataset('data', data=object)
+# def load_hdf5(object_name, path, num_frames=None):
+#     print "    Loading " +  object_name
+#     obj_file = h5py.File(path + object_name + '.h5', 'r')
+#     obj_mat = obj_file['data']
+#     return obj_mat[:num_frames]
+#
+# def save_hdf5(object_name, path, object):
+#     print "    Saving " +  object_name
+#     with h5py.File(path + object_name +'.h5', 'w') as hf:
+#         hf.create_dataset('data', data=object)
 
 def create_trajectory_data(self):
     self.traj_list = []
@@ -132,16 +132,17 @@ def draw_skill_time_dist(self,skill_ind):
         plt.hist(self.smdp.skill_time[skill_ind][i], bins=100)
 
 
-def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, n_clusters, k=10, ):
+def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, n_clusters, k=1):
 
-    def unite_indices(traj_list, traj_indices):
-        all_indices = []
-        for i in traj_indices:
-            all_indices.append(traj_list[i]['points'])
-        return all_indices
+    def unite_trajs_mask(traj_list, traj_indices, n_points):
+        unite_mask = np.zeros(n_points, dtype=bool)
+        for t_ind in traj_indices:
+            unite_mask = np.logical_or(unite_mask, traj_list[t_ind]['points'])
+        return unite_mask
 
-    N = len(traj_list)
-    reward = np.zeros(N)
+    n_trajs = len(traj_list)
+    n_points = len(traj_list[0]['points'])
+    reward = np.zeros(n_trajs)
 
     # sort trajectories by reward
     for t_ind, t in enumerate(traj_list):
@@ -150,15 +151,18 @@ def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, 
     traj_order = np.argsort(reward)
     bottom_trajs = traj_order[:k]
     top_trajs = traj_order[-k:]
-    top_mask = unite_indices(traj_list, top_trajs)
-    bottom_mask = unite_indices(traj_list, bottom_trajs)
+    top_mask = unite_trajs_mask(traj_list, top_trajs, n_points)
+    bottom_mask = unite_trajs_mask(traj_list, bottom_trajs, n_points)
 
     top_model = SMDP(labels, termination[top_mask], rewards[top_mask], values[top_mask], n_clusters, gamma=0.99, trunc_th = 0.1)
     bottom_model = SMDP(labels, termination[bottom_mask], rewards[bottom_mask], values[bottom_mask], n_clusters, gamma=0.99, trunc_th = 0.1)
 
     cross_entropy = np.zeros(n_clusters)
     for c in xrange(n_clusters):
-        cross_entropy[c] = 0.5 * (entropy(top_model.P[c], bottom_model.P[c]) + entropy(bottom_model.P[c], top_model.P[c])) - entropy(top_model.P[c]) - entropy(bottom_model.P[c])
+        cross_entropy[c] = 0.5 * (scipy.stats.entropy(top_model.P[c], bottom_model.P[c]) + scipy.stats.entropy(bottom_model.P[c], top_model.P[c])) - \
+                           scipy.stats.entropy(top_model.P[c]) - scipy.stats.entropy(bottom_model.P[c])
+
+    return cross_entropy
 
 #############################
 # 8. color outliers
