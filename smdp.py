@@ -9,7 +9,7 @@ def divide_tt(X, tt_ratio):
     return X_train, X_test
 
 class SMDP(object):
-    def __init__(self, labels, termination, rewards, values, n_clusters, tb=0, gamma=0.99, trunc_th = 0.1, k=1):
+    def __init__(self, labels, termination, rewards, values, n_clusters, tb=0, gamma=0.99, trunc_th = 0.1, k=5):
 
         self.k = k
         self.gamma = gamma
@@ -111,10 +111,11 @@ class SMDP(object):
             if l == l_p:
                 t += 1
             else:
-                mean_rewards[l_p,0] += total_r #/ (t+1)
-                mean_rewards[l_p,1] += 1
-                mean_times[l_p,0] += t
-                mean_times[l_p,1] += 1
+                if t>self.k:
+                    mean_rewards[l_p,0] += total_r #/ (t+1)
+                    mean_rewards[l_p,1] += 1
+                    mean_times[l_p,0] += t
+                    mean_times[l_p,1] += 1
                 l_p = l
                 total_r = 0
                 t = 0
@@ -161,9 +162,11 @@ class SMDP(object):
         return value_vec[:,0]
 
     def value_score(self):
-        v_dqn = (self.v_dqn-self.v_dqn.mean())/self.v_dqn.std()
-        v_smdp = (self.v_smdp-self.v_smdp.mean())/self.v_smdp.std()
-        return ((v_dqn-v_smdp)**2).mean()
+        # v_dqn = (self.v_dqn-self.v_dqn.mean())/self.v_dqn.std()
+        # v_smdp = (self.v_smdp-self.v_smdp.mean())/self.v_smdp.std()
+        v_dqn = self.v_dqn
+        v_smdp = self.v_smdp
+        return np.linalg.norm(v_dqn-v_smdp)/np.linalg.norm(v_dqn)
 
     def policy_improvement(self):
         policy = []
@@ -243,15 +246,18 @@ class SMDP(object):
             if l[0] != l_p:
                 if self.P[l_p,l[0]]>0:
                     skill_index = np.nonzero(skill_list[l_p]==l[0])[0] #find skill index in list
-                    length = []
-                    length.append(len(current_skill))
-                    if len(skill_index) == 0: #if not found - append
-                        skill_list[l_p].append(l[0])
-                        skill_indices[l_p].append(current_skill)
-                        skill_time[l_p].append(length)
-                    else:
-                        skill_indices[l_p][skill_index].extend(current_skill)
-                        skill_time[l_p][skill_index].extend(length)
+                    curr_length = len(current_skill)
+                    if curr_length > self.k:
+                        length = []
+                        length.append(curr_length)
+
+                        if len(skill_index) == 0: #if not found - append
+                            skill_list[l_p].append(l[0])
+                            skill_indices[l_p].append(current_skill)
+                            skill_time[l_p].append(length)
+                        else:
+                            skill_indices[l_p][skill_index].extend(current_skill)
+                            skill_time[l_p][skill_index].extend(length)
 
                 l_p = l[0]
                 current_skill = []

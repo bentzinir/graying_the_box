@@ -119,7 +119,7 @@ def clustering_(self,plt):
     self.top_greedy_vec = top_greedy_vec
     self.bottom_greedy_vec = bottom_greedy_vec
 
-    common.draw_skills(self,plt)
+    common.draw_skills(self,self.smdp.n_clusters,plt)
 
 
     # 4. collect statistics

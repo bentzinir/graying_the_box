@@ -38,51 +38,44 @@ def create_trajectory_data(self):
 
 def visualize(self):
     m = self.smdp
-    print 'Value mse: %f' % m.score
     m.evaluate_greedy_policy(0)
 
-    # Display 0:
-    title = 'White - n_clusters: %d ' % m.n_clusters
-    plt.figure(title)
-    plt.title(title)
-    plt.plot((m.v_dqn-m.v_dqn.mean())/m.v_dqn.std(),'b--',label='DQN')
-    plt.plot((m.v_smdp-m.v_smdp.mean())/m.v_smdp.std(),'r-.',label='Semi-MDP')
-    plt.plot((m.v_greedy-m.v_greedy.mean())/m.v_greedy.std(),'g',label='improved policy')
-    plt.legend()
-    plt.xlabel('cluster index')
-    plt.ylabel('value')
+    plt.figure('Value function consistency')
+    ax_1 = plt.subplot('211')
+    ax_1.plot((m.v_dqn-m.v_dqn.mean())/m.v_dqn.std(),'b',label='DQN')
+    ax_1.plot((m.v_smdp-m.v_smdp.mean())/m.v_smdp.std(),'r',label='Semi-MDP')
+    ax_1.plot((m.v_greedy-m.v_greedy.mean())/m.v_greedy.std(),'g',label='Greedy policy')
+    ax_1.legend()
+    ax_1.set_xlabel('cluster index')
+    ax_1.set_ylabel('value')
+    title1 = 'White - n_clusters: %d ' % m.n_clusters
+    ax_1.set_title(title1)
 
+    ax_2 = plt.subplot('212')
+    ax_2.plot(m.v_dqn,'b',label='DQN')
+    ax_2.plot(m.v_smdp,'r',label='Semi-MDP')
+    ax_2.plot(m.v_greedy,'g',label='Greedy policy')
+    ax_2.legend()
+    title2 = 'Reg - n_clusters: %d ' % m.n_clusters
+    ax_2.set_title(title2)
+    ax_2.set_xlabel('cluster index')
+    ax_2.set_ylabel('value')
 
-    # Display 1 (regular)
-    # plt.plot(m.v_dqn - m.v_dqn.mean(),'b')
-    # plt.plot(m.v_smdp - m.v_smdp.mean(),'r')
+    # ll = np.arange(start=0.0,stop=0.05,step=0.05)
+    # title = 'greedy policy improvement'
+    # plt.figure(title)
+    # plt.title(title)
+    # plt.plot(m.v_smdp,'r--',label='smdp')
+    # plt.plot(m.v_dqn,'g--',label='dqn')
+    #
+    # for l in ll:
+    #     m.evaluate_greedy_policy(l)
+    #     plt.plot(m.v_greedy,c=np.random.rand(3,1),label=l)
+    #     # plt.plot(m.v_greedy,'b',label='improved policy')
+    # plt.legend()
+    # plt.show(block=True)
 
-    # Display 2 (normalized)
-    title = 'Reg - n_clusters: %d ' % m.n_clusters
-    plt.figure(title)
-    plt.title(title)
-    plt.plot(m.v_dqn,'b--',label='DQN')
-    plt.plot(m.v_smdp,'r-.',label='Semi-MDP')
-    plt.plot(m.v_greedy,'g',label='improved policy')
-    plt.legend()
-    plt.xlabel('cluster index')
-    plt.ylabel('value')
-
-    ll = np.arange(start=0.0,stop=0.05,step=0.05)
-    title = 'greedy policy improvement'
-    plt.figure(title)
-    plt.title(title)
-    plt.plot(m.v_smdp,'r--',label='smdp')
-    plt.plot(m.v_dqn,'g--',label='dqn')
-
-    for l in ll:
-        m.evaluate_greedy_policy(l)
-        plt.plot(m.v_greedy,c=np.random.rand(3,1),label=l)
-        # plt.plot(m.v_greedy,'b',label='improved policy')
-    plt.legend()
-    plt.show(block=True)
-
-    plt.figure('Correlation coeficient')
+    plt.figure('Greedy policy consistency')
     # PI
     ax_1 = plt.subplot('211')
     markerline, stemlines, baseline = ax_1.stem(self.state_pi_correlation,'b-.')
@@ -152,28 +145,25 @@ def reward_policy_correlation(traj_list, policy, smdp):
 
 def draw_skills(self,n_clusters,plt):
     plt.figure('Skills')
+    subplot_ind = 0
+    N_sub_plots = 12
     for cluster_ind in xrange(n_clusters):
-        for i in xrange(len(self.smdp.skill_time[cluster_ind])):
-            subplot_ind = 331+i
-            ax = plt.subplot(subplot_ind)
-            ax.set_title('Skill %d' %self.smdp.skill_list[cluster_ind][i])
-            # ax.axis('off')
-            plt.hist(self.smdp.skill_time[cluster_ind][i], bins=100)
-
-        state_indices = (self.clustering_labels==cluster_ind)
-        cluster_mean_screen = calc_cluster_im(self,state_indices)
-        plt.figure('Cluster %d skills' %cluster_ind)
-        ax = plt.subplot(442)
-        ax.imshow(cluster_mean_screen)
-        ax.set_title('Full cluster %d' % cluster_ind)
-        ax.axis('off')
         for i,l in enumerate(self.smdp.skill_indices[cluster_ind]):
-            skill_mean_screen = calc_cluster_im(self,l)
-            subplot_ind = 445+i
-            ax = plt.subplot(subplot_ind)
-            ax.imshow(skill_mean_screen)
-            ax.set_title('Skill %d' %self.smdp.skill_list[cluster_ind][i])
+            subplot_ind += 1
+            ax = plt.subplot(N_sub_plots,N_sub_plots,subplot_ind)
+            ax.set_title('Cluster %d, Skill %d' %(cluster_ind,self.smdp.skill_list[cluster_ind][i]),fontsize=8)#per skill
+            ax.tick_params(axis='both', which='major', labelsize=8)
+            ax.tick_params(axis='both', which='minor', labelsize=8)
+            skill_hist = plt.hist(self.smdp.skill_time[cluster_ind][i], bins=100) #per skill
+            # most_likely_length = np.round(skill_hist[1][np.argmax(skill_hist[0])])
+            skill_mean_screen = calc_cluster_im(self,l)#per skill
+            subplot_ind += 1
+            ax = plt.subplot(N_sub_plots,N_sub_plots,subplot_ind)
+            ax.imshow(skill_mean_screen)#per skill
+            ax.set_title('Cluster %d, Skill %d' %(cluster_ind,self.smdp.skill_list[cluster_ind][i]),fontsize=8)#per skill
             ax.axis('off')
+
+
 def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, n_clusters, pi_analytic, d=30):
 
     def unite_trajs_mask(traj_list, traj_indices, n_points):
@@ -242,12 +232,6 @@ def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, 
             bottom_cluster_sum += 1
 
     bottom_greedy_sum = bottom_greedy_sum / bottom_cluster_sum
-
-    print 'd:%d' %d
-    print 'top_greedy_sum: %f' % top_greedy_sum
-    print 'bottom_greedy_sum: %f' % bottom_greedy_sum
-    print 'top_cluster clusters: %d' % top_cluster_sum
-    print 'bottom_cluster clusters: %d' % bottom_cluster_sum
 
     tb_disc = np.zeros(n_clusters)
     bt_disc = np.zeros(n_clusters)

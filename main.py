@@ -7,7 +7,7 @@ from vis_tool import VIS_TOOL
 
 # Parameters
 run_dir         = '120k'
-num_frames      = 12000
+num_frames      = 120000
 game_id         = 0 # 0-breakout, 1-seaquest, 2-pacman
 load_data       = 0
 debug_mode      = 0
