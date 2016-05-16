@@ -7,12 +7,7 @@ import numpy as np
 import common
 from digraph import draw_transition_table
 
-
-
-
-
-
-def perpare_features(self, n_features):
+def perpare_features(self, n_features=3):
 
     data = np.zeros(shape=(self.global_feats['tsne'].shape[0],n_features))
     data[:,0:2] = self.global_feats['tsne']
@@ -30,30 +25,41 @@ def perpare_features(self, n_features):
     # 1.2 data standartization
     # scaler = preprocessing.StandardScaler(with_centering=False).fit(data)
     # data = scaler.fit_transform(data)
-    data_scale = data.max(axis=0)
+
     # data_mean  = data.mean(axis=0)
     # data -= data_mean
-    data /= data_scale
-    return data, data_scale
+    return data
 
-def clustering_(self,plt):
+def clustering_(self, plt, n_points=None, force=0):
+
+    if n_points==None:
+        n_points = self.global_feats['termination'].shape[0]
+
     if self.clustering_labels is not None:
         self.tsne_scat.set_array(self.clustering_labels.astype(np.float32)/self.clustering_labels.max())
-        draw_transition_table(transition_table=self.smdp.P, cluster_centers=self.cluster_centers,
-                          meanscreen=self.meanscreen, tsne=self.global_feats['tsne'], color=self.color, black_edges=self.smdp.edges)
+        # draw_transition_table(transition_table=self.smdp.P, cluster_centers=self.cluster_centers,
+        #                   meanscreen=self.meanscreen, tsne=self.global_feats['tsne'], color=self.color, black_edges=self.smdp.edges)
         plt.show()
-        return
+        if force==0:
+            return
 
     n_clusters = self.cluster_params['n_clusters']
     W = self.cluster_params['window_size']
     n_iters = self.cluster_params['n_iters']
     entropy_iters = self.cluster_params['entropy_iters']
-    term = self.global_feats['termination']
-    reward = self.global_feats['reward']
-    value = self.global_feats['value']
+
+    # slice data by given indices
+    term = self.global_feats['termination'][:n_points]
+    reward = self.global_feats['reward'][:n_points]
+    value = self.global_feats['value'][:n_points]
+    tsne = self.global_feats['tsne'][:n_points]
+    traj_ids = self.hand_craft_feats['traj'][:n_points]
 
     # 1. create data for clustering
-    data, data_scale = perpare_features(self,n_features=3)
+    data = perpare_features(self)
+    data = data[:n_points]
+    data_scale = data.max(axis=0)
+    data /= data_scale
 
     # 2. Build cluster model
     # 2.1 spatio-temporal K-means
@@ -78,7 +84,7 @@ def clustering_(self,plt):
     elif self.cluster_params['method'] == 1:
         import scipy.spatial.distance
         import scipy.sparse
-        dists = scipy.spatial.distance.pdist(self.global_feats['tsne'], 'euclidean')
+        dists = scipy.spatial.distance.pdist(tsne, 'euclidean')
         similarity = np.exp(-dists/10)
         similarity[similarity<1e-2] = 0
         print 'Created similarity matrix'
@@ -99,7 +105,7 @@ def clustering_(self,plt):
 
     self.smdp.complete_smdp()
     self.clustering_labels = self.smdp.labels
-    common.create_trajectory_data(self)
+    common.create_trajectory_data(self, reward, traj_ids)
     self.state_pi_correlation = common.reward_policy_correlation(self.traj_list, self.smdp.greedy_policy, self.smdp)
 
     top_greedy_vec = []
@@ -119,7 +125,7 @@ def clustering_(self,plt):
     self.top_greedy_vec = top_greedy_vec
     self.bottom_greedy_vec = bottom_greedy_vec
 
-    common.draw_skills(self,plt)
+    # common.draw_skills(self,plt)
 
 
     # 4. collect statistics
