@@ -16,20 +16,21 @@ def save_hdf5(object_name, path, object):
     with h5py.File(path + object_name +'.h5', 'w') as hf:
         hf.create_dataset('data', data=object)
 
-def create_trajectory_data(self):
+def create_trajectory_data(self, reward, traj_ids):
     self.traj_list = []
-    for traj_id in xrange(self.hand_craft_feats['n_trajs']-1):
-        traj_point_mask = np.asarray(self.hand_craft_feats['traj'])==traj_id
+    n_trajs = np.asarray(traj_ids).max() - 1
+    for traj_id in xrange(n_trajs):
+        traj_point_mask = np.asarray(traj_ids)==traj_id
         traj_labels = self.clustering_labels[np.nonzero(traj_point_mask)]
         traj_length = np.sum(traj_point_mask)
-        R = np.sum(self.global_feats['reward'][np.nonzero(traj_point_mask)])
+        R = np.sum(reward[np.nonzero(traj_point_mask)])
         moves = []
         for i in xrange(traj_length-1):
             if traj_labels[i] != traj_labels[i+1] and self.smdp.P[traj_labels[i],traj_labels[i+1]]>0:
                 moves.append((traj_labels[i],traj_labels[i+1]))
         self.traj_list.append(
             {
-                'R': R,
+                'R': R.astype(np.float32),
                 'length': traj_length,
                 'moves': moves,
                 'points': traj_point_mask,

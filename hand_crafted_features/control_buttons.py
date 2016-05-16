@@ -218,7 +218,7 @@ def add_buttons(self):
     # 9. Policy improvement
     #############################
     def policy_improvement(event):
-        if self.clustering_labels is None:
+        if not hasattr(self,'clustering_labels'):
             return
 
         policy = self.smdp.greedy_policy
@@ -228,3 +228,83 @@ def add_buttons(self):
     self.ax_pi = plt.axes([0.80, 0.77, 0.09, 0.02])
     self.b_pi = Button(self.ax_pi, 'Policy improve.')
     self.b_pi.on_clicked(policy_improvement)
+
+
+    #############################
+    # 10. Eject
+    #############################
+    def eject(event):
+        if not hasattr(self,'clustering_labels'):
+            return
+
+        tt_ratio = 0.2
+        n_points = self.global_feats['termination'].shape[0]
+
+        n_points_model = int(n_points*tt_ratio)
+        last_model_traj = self.hand_craft_feats['traj'][n_points_model]
+        n_points_model = np.flatnonzero(np.asarray(self.hand_craft_feats['traj']) == last_model_traj)[-1]
+
+        n_points_held_out = n_points - n_points_model - 1
+
+        # 1. Average score before eject
+        R = 0
+        count = 0
+        for traj in self.traj_list[last_model_traj+1:]:
+            R += traj['R']
+            count += 1
+
+        print 'Average score before eject: %f' % (R / count)
+
+        # 2. Build model on first part of the data
+        # DEBUG
+        n_points_model=n_points-1
+        clustering_(self, plt, n_points=n_points_model+1, force=1)
+
+        # 3. define eject set
+        eject_indices = np.nonzero((self.tb_trajs_discr['top_model'].P==0) * (self.tb_trajs_discr['bottom_model'].P>0))
+
+        # 4. create held_out set
+        data_held_out = np.zeros(shape=(n_points_held_out, 3))
+        data_held_out[:, 0:2] = self.global_feats['tsne'][-n_points_held_out:]
+        data_held_out[:, 2] = self.global_feats['value'][-n_points_held_out:]
+
+        rewards_held_out = self.global_feats['reward'][-n_points_held_out:]
+
+        labels_held_out = -1*np.ones(n_points_held_out)
+
+        # 5. cluster held-out points using NN
+        for i,d in enumerate(data_held_out):
+            labels_held_out[i] = np.argmin(((d - self.cluster_centers) ** 2).sum(axis=1))
+
+        # 6. find average score on held-out trajectories, excluding ejected trajectories
+        held_out_trajs = self.hand_craft_feats['traj'][-n_points_held_out:]
+        held_out_trajs -= held_out_trajs.min()
+        max_traj_id = np.asarray(held_out_trajs).max()
+
+        eject_indices_ = np.asarray(eject_indices).T
+
+        valid_trajs = np.ones(max_traj_id)
+
+        for i in xrange(n_points_held_out-1):
+            move_i = np.asarray([labels_held_out[i],labels_held_out[i+1]])
+            diff_i = (abs((move_i - eject_indices_))).sum(axis=1)
+            if diff_i.min()==0:
+                valid_trajs[held_out_trajs[i]] = 0
+
+        R_ = 0
+        curr_traj = held_out_trajs[0]
+        for i in xrange(n_points_held_out):
+            if curr_traj == max_traj_id:
+                break
+            if (held_out_trajs[i]==curr_traj) and valid_trajs[curr_traj]==1:
+                R_t += rewards_held_out[i]
+            else:
+                R_ += R_t
+                R_t = 0
+                curr_traj = held_out_trajs[i]
+
+        print 'Average score after eject: %f' % (R_ / valid_trajs.sum())
+
+    self.ax_ej = plt.axes([0.80, 0.74, 0.09, 0.02])
+    self.b_ej = Button(self.ax_ej, 'Eject')
+    self.b_ej.on_clicked(eject)
