@@ -5,7 +5,7 @@ import pickle
 import numpy as np
 import common
 
-def draw_transition_table(transition_table, cluster_centers, meanscreen, tsne ,color, black_edges=None, red_edges=None):
+def draw_transition_table(transition_table, cluster_centers, meanscreen, tsne ,color, black_edges=None, red_edges=None, title=None):
     G  = nx.DiGraph()
     edge_colors = []
 
@@ -31,8 +31,11 @@ def draw_transition_table(transition_table, cluster_centers, meanscreen, tsne ,c
         node_labels[key] =  counter
         counter+=1
 
-    fig = plt.figure('SMDP')
-    fig.clear()
+    if title is None:
+        fig = plt.figure('SMDP')
+        fig.clear()
+    else:
+        fig = plt.figure(title)
 
     plt.scatter(tsne[:,0],tsne[:,1],s= np.ones(tsne.shape[0])*2,facecolor=color, edgecolor='none')
     pos = cluster_centers[:,0:2]

@@ -9,34 +9,44 @@ def divide_tt(X, tt_ratio):
     return X_train, X_test
 
 class SMDP(object):
-    def __init__(self, labels, termination, rewards, values, n_clusters, gamma=0.99, trunc_th = 0.1, k=0):
+    def __init__(self, labels, termination, rewards, values, n_clusters, tb=0, gamma=0.99, trunc_th = 0.1, k=1):
 
         self.k = k
         self.gamma = gamma
         self.trunc_th = trunc_th
         self.rewards = rewards
-        self.labels,self.n_clusters = self.remove_empty_clusters(labels,n_clusters)
+        if tb == 0:
+            self.labels,self.n_clusters = self.remove_empty_clusters(labels,n_clusters)
+        else:
+            self.labels = labels
+            self.n_clusters = n_clusters
         self.termination = termination
         self.TT = self.calculate_transition_matrix()
         self.P = self.calculate_prob_transition_matrix(self.TT)
-        # self.check_empty_P()
-        self.r, self.skill_time = self.smdp_reward()
-        self.v_smdp = self.calc_v_smdp(self.P)
-        self.v_dqn = self.calc_v_dqn(values)
-        self.score = self.value_score()
-        self.clusters_count = self.count_clusters()
-        self.entropy = self.calc_entropy(self.P)
+        if tb == 0:
+            self.check_empty_P()
+            self.r, self.skill_time = self.smdp_reward()
+            self.v_smdp = self.calc_v_smdp(self.P)
+            self.v_dqn = self.calc_v_dqn(values)
+            self.score = self.value_score()
+            self.clusters_count = self.count_clusters()
+            self.entropy = self.calc_entropy(self.P)
+        self.edges = self.get_smdp_edges()
+
     ####### Methods ######
 
+    def check_empty_P(self):
+        cluster_ind = 0
+        for p in (self.P):
+            if p.sum()==0:
+                indices = np.nonzero(self.labels==cluster_ind)[0]
+                for i in indices:
+                    self.labels[i]=self.labels[i-1]
+            cluster_ind+=1
+        self.labels, self.n_clusters = self.remove_empty_clusters(self.labels,self.n_clusters)
+        self.TT = self.calculate_transition_matrix()
+        self.P = self.calculate_prob_transition_matrix(self.TT)
 
-    # def check_empty_P(self):
-    #     count = 0
-    #     for p in (self.P):
-    #         if len(np.nonzero(p)[0])==0:
-    #             if len(np.nonzero(self.P[:,count])[0])==0:
-    #                 #emty cluster
-
-            # count+=1
     def count_clusters(self):
         cluster_count = np.zeros(self.n_clusters)
         for l in self.labels:
@@ -55,6 +65,7 @@ class SMDP(object):
         for ind,l in enumerate(labels_i):
             labels_i[ind] -= shift_vec[l]
         new_n_clusters = np.max(labels_i)+1
+
         return labels_i,new_n_clusters
 
     def calc_entropy(self,P):
@@ -78,6 +89,7 @@ class SMDP(object):
                 if self.labels[i]!=self.labels[i+1] and np.all(self.labels[i+1:i+2+self.k]==self.labels[i+1]):
                     TT[self.labels[i], self.labels[i + 1]] += 1
         return TT
+
     def calculate_prob_transition_matrix(self,TT):
         P = np.copy(TT)
         for i in xrange(self.n_clusters):
@@ -250,5 +262,4 @@ class SMDP(object):
         self.skills, self.R_skills, self.k_skills = self.create_skills_model(self.P)
         self.greedy_policy = self.policy_improvement()
         self.v_greedy = self.evaluate_greedy_policy(0)
-        self.edges = self.get_smdp_edges()
         self.skill_indices, self.skill_list,self.skill_time = self.calc_skill_indices()

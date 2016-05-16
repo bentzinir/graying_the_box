@@ -7,50 +7,9 @@ import numpy as np
 import common
 from digraph import draw_transition_table
 
-def calc_cluster_im(self,indices):
-    screens = np.copy(self.screens[indices])
-    if self.game_id  == 2: #pacman
-        for s in screens:
 
-            enemies_map = 1 * (s[:,:,0] == 180) + \
-                          1 * (s[:,:,0] == 149) + \
-                          1 * (s[:,:,0] == 212) + \
-                          1 * (s[:,:,0] == 128) + \
-                          1 * (s[:,:,0] == 232) + \
-                          1 * (s[:,:,0] == 204)
 
-            enemies_mask = np.ones((210,160),dtype=bool)
-            enemies_mask[20:28,6:10] = 0
-            enemies_mask[140:148,6:10] = 0
-            enemies_mask[20:28,150:154] = 0
-            enemies_mask[140:148,150:154] = 0
-            enemies_map = enemies_map * enemies_mask
-            r_ch = s[:,:,0]
-            g_ch = s[:,:,1]
-            b_ch = s[:,:,2]
-            r_ch[np.nonzero(enemies_map)] = 45
-            g_ch[np.nonzero(enemies_map)] = 50
-            b_ch[np.nonzero(enemies_map)] = 184
-    meanscreen=np.mean(screens,axis=0)
 
-    return meanscreen
-
-def draw_skills(self,cluster_ind,plt):
-    state_indices = (self.clustering_labels==cluster_ind)
-    cluster_mean_screen = calc_cluster_im(self,state_indices)
-
-    plt.figure('Cluster %d skills' %cluster_ind)
-    ax = plt.subplot(442)
-    ax.imshow(cluster_mean_screen)
-    ax.set_title('Full cluster %d' % cluster_ind)
-    ax.axis('off')
-    for i,l in enumerate(self.smdp.skill_indices[cluster_ind]):
-        skill_mean_screen = calc_cluster_im(self,l)
-        subplot_ind = 445+i
-        ax = plt.subplot(subplot_ind)
-        ax.imshow(skill_mean_screen)
-        ax.set_title('Skill %d' %self.smdp.skill_list[cluster_ind][i])
-        ax.axis('off')
 
 
 def perpare_features(self, n_features):
@@ -79,7 +38,7 @@ def perpare_features(self, n_features):
 
 def clustering_(self,plt):
     if self.clustering_labels is not None:
-        self.tsne_scat.set_array(self.clustering_labels/self.clustering_labels.max())
+        self.tsne_scat.set_array(self.clustering_labels.astype(np.float32)/self.clustering_labels.max())
         draw_transition_table(transition_table=self.smdp.P, cluster_centers=self.cluster_centers,
                           meanscreen=self.meanscreen, tsne=self.global_feats['tsne'], color=self.color, black_edges=self.smdp.edges)
         plt.show()
@@ -138,17 +97,30 @@ def clustering_(self,plt):
         labels = cluster_model.labels_
         self.smdp = SMDP(labels=labels, termination=term, rewards=reward, values=value, n_clusters=n_clusters)
 
-    self.clustering_labels = (labels).astype(np.float32)
     self.smdp.complete_smdp()
+    self.clustering_labels = self.smdp.labels
     common.create_trajectory_data(self)
     self.state_pi_correlation = common.reward_policy_correlation(self.traj_list, self.smdp.greedy_policy, self.smdp)
 
-    # common.extermum_trajs_discrepency(self.traj_list)
+    top_greedy_vec = []
+    bottom_greedy_vec = []
+    max_diff = 0
+    best_d = 1
+    for i,d in enumerate(xrange(1,30)):
+        tb_trajs_discr = common.extermum_trajs_discrepency(self.traj_list, self.clustering_labels, term, reward, value, self.smdp.n_clusters, self.smdp.greedy_policy, d=d)
+        top_greedy_vec.append([i,tb_trajs_discr['top_greedy_sum']])
+        bottom_greedy_vec.append([i,tb_trajs_discr['bottom_greedy_sum']])
+        diff_i = tb_trajs_discr['top_greedy_sum'] - tb_trajs_discr['bottom_greedy_sum']
+        if diff_i > max_diff:
+            max_diff = diff_i
+            best_d = d
 
-    # for i in xrange(self.cluster_params['n_clusters']):
-    #     draw_skills(self,i,plt)
-    #     common.draw_skill_time_dist(self,i)
-    common.visualize(self)
+    self.tb_trajs_discr = common.extermum_trajs_discrepency(self.traj_list, self.clustering_labels, term, reward, value, self.smdp.n_clusters, self.smdp.greedy_policy, d=best_d)
+    self.top_greedy_vec = top_greedy_vec
+    self.bottom_greedy_vec = bottom_greedy_vec
+
+    common.draw_skills(self,plt)
+
 
     # 4. collect statistics
     cluster_centers = cluster_model.cluster_centers_
@@ -165,8 +137,7 @@ def clustering_(self,plt):
         indices = (labels==cluster_ind)
         cluster_data = data[indices]
         cluster_time[cluster_ind] = np.mean(self.global_feats['time'][indices])
-        meanscreen[cluster_ind,:,:,:] = calc_cluster_im(self,indices)
-
+        meanscreen[cluster_ind,:,:,:] = common.calc_cluster_im(self,indices)
 
     # 5. draw cluster indices
     plt.figure(self.fig.number)
@@ -176,10 +147,10 @@ def clustering_(self,plt):
     draw_transition_table(transition_table=self.smdp.P, cluster_centers=cluster_centers,
                           meanscreen=meanscreen, tsne=data[:,0:2], color=self.color, black_edges=self.smdp.edges)
 
-    self.cluster_centers =cluster_centers
+    self.cluster_centers = cluster_centers
     self.meanscreen =meanscreen
     self.cluster_time =cluster_time
-    plt.show()
+    common.visualize(self)
 
 def update_slider(self, name, slider):
     def f():

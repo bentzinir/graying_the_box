@@ -7,13 +7,13 @@ from vis_tool import VIS_TOOL
 
 # Parameters
 run_dir         = '120k'
-num_frames      = 10000
+num_frames      = 12000
 game_id         = 0 # 0-breakout, 1-seaquest, 2-pacman
 load_data       = 0
 debug_mode      = 0
 cluster_method  = 0 # 0-kmeans, 1-spectral_clustering, 2-EMHC (entropy minimization hierarchical clustering)
 n_clusters      = 22
-window_size     = 7
+window_size     = 2
 n_iters         = 8
 entropy_iters   = 0
 

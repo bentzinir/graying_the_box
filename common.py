@@ -1,19 +1,20 @@
-# import h5py
+import h5py
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats
 from smdp import SMDP
+from digraph import draw_transition_table
 
-# def load_hdf5(object_name, path, num_frames=None):
-#     print "    Loading " +  object_name
-#     obj_file = h5py.File(path + object_name + '.h5', 'r')
-#     obj_mat = obj_file['data']
-#     return obj_mat[:num_frames]
-#
-# def save_hdf5(object_name, path, object):
-#     print "    Saving " +  object_name
-#     with h5py.File(path + object_name +'.h5', 'w') as hf:
-#         hf.create_dataset('data', data=object)
+def load_hdf5(object_name, path, num_frames=None):
+    print "    Loading " +  object_name
+    obj_file = h5py.File(path + object_name + '.h5', 'r')
+    obj_mat = obj_file['data']
+    return obj_mat[:num_frames]
+
+def save_hdf5(object_name, path, object):
+    print "    Saving " +  object_name
+    with h5py.File(path + object_name +'.h5', 'w') as hf:
+        hf.create_dataset('data', data=object)
 
 def create_trajectory_data(self):
     self.traj_list = []
@@ -82,20 +83,47 @@ def visualize(self):
     plt.show(block=True)
 
     plt.figure('Correlation coeficient')
-    markerline, stemlines, baseline = plt.stem(self.state_pi_correlation,'b-.')
+    # PI
+    ax_1 = plt.subplot('211')
+    markerline, stemlines, baseline = ax_1.stem(self.state_pi_correlation,'b-.')
     plt.setp(markerline, 'markerfacecolor', 'b')
     plt.setp(baseline, 'color', 'r', 'linewidth', 2)
+    ax_1.set_title('Policy Improvement - Reward Correlation')
+    ax_1.set_xlabel('Cluster index')
 
+    # Top-greedy correlation vs. bottom-Greedy correlation
+    ax_2 = plt.subplot('212')
+    ax_2.plot(np.asarray([x[0] for x in self.top_greedy_vec],dtype=np.float32)/len(self.traj_list), np.asarray([x[1] for x in self.top_greedy_vec]), '-b')
+    ax_2.plot(np.asarray([x[0] for x in self.bottom_greedy_vec],dtype=np.float32)/len(self.traj_list), np.asarray([x[1] for x in self.bottom_greedy_vec]), '-r')
+    ax_2.set_title('Greedy Policy Weight')
+    ax_2.set_xlabel('Percentage of Extermum trajectories used')
+
+    # # Top-Bottom discrepency
+    # ax = plt.subplot('412')
+    # markerline, stemlines, baseline = ax.stem(self.tb_trajs_discr['tb_disc'],'b-.')
+    # plt.setp(markerline, 'markerfacecolor', 'b')
+    # plt.setp(baseline, 'color', 'r', 'linewidth', 2)
+    # ax.set_title('Top Bottom Discrepency')
+    # # Bottom-Top discrepency
+    # ax = plt.subplot('413')
+    # markerline, stemlines, baseline = ax.stem(self.tb_trajs_discr['bt_disc'],'b-.')
+    # plt.setp(markerline, 'markerfacecolor', 'b')
+    # plt.setp(baseline, 'color', 'r', 'linewidth', 2)
+    # ax.set_title('Bottom Top Discrepency')
 
     # value_diff =  (m.v_greedy[:,0]-m.v_greedy[:,0].mean())/m.v_greedy[:,0].std() - (m.v_smdp-m.v_smdp.mean())/m.v_smdp.std()
     # value_diff =  (m.v_greedy[:,0]-m.v_smdp)/m.v_smdp
     # plt.plot(value_diff,'r--',label='V greedy - V smdp')
     # corr = np.corrcoef(value_diff, self.state_pi_correlation)[0,1]
-    plt.xlabel('SMDP state')
-    plt.ylabel('Correlation coefient')
     # plt.legend()
-    title = 'Correlation between percantage of choosing the greedy policy(at SMDP state i) and the trajectotry total reward'
-    plt.title(title)
+
+    # draw_transition_table(transition_table=self.tb_trajs_discr['top_model'].P, cluster_centers=self.cluster_centers,
+    #                       meanscreen=self.meanscreen, tsne=self.data_t.T, color=self.color, black_edges=self.tb_trajs_discr['top_model'].edges, title='Top Model')
+    #
+    # draw_transition_table(transition_table=self.tb_trajs_discr['bottom_model'].P, cluster_centers=self.cluster_centers,
+    #                       meanscreen=self.meanscreen, tsne=self.data_t.T, color=self.color, black_edges=self.tb_trajs_discr['bottom_model'].edges, title='Bottom Model')
+
+    plt.show()
 
 def reward_policy_correlation(traj_list, policy, smdp):
     N = len(traj_list)
@@ -122,17 +150,31 @@ def reward_policy_correlation(traj_list, policy, smdp):
 
     return corr
 
-def draw_skill_time_dist(self,skill_ind):
-    plt.figure('Cluster %d skills' %skill_ind)
-    for i in xrange(len(self.smdp.skill_time[skill_ind])):
-        subplot_ind = 331+i
-        ax = plt.subplot(subplot_ind)
-        ax.set_title('Skill %d' %self.smdp.skill_list[skill_ind][i])
-        # ax.axis('off')
-        plt.hist(self.smdp.skill_time[skill_ind][i], bins=100)
+def draw_skills(self,n_clusters,plt):
+    plt.figure('Skills')
+    for cluster_ind in xrange(n_clusters):
+        for i in xrange(len(self.smdp.skill_time[cluster_ind])):
+            subplot_ind = 331+i
+            ax = plt.subplot(subplot_ind)
+            ax.set_title('Skill %d' %self.smdp.skill_list[cluster_ind][i])
+            # ax.axis('off')
+            plt.hist(self.smdp.skill_time[cluster_ind][i], bins=100)
 
-
-def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, n_clusters, k=1):
+        state_indices = (self.clustering_labels==cluster_ind)
+        cluster_mean_screen = calc_cluster_im(self,state_indices)
+        plt.figure('Cluster %d skills' %cluster_ind)
+        ax = plt.subplot(442)
+        ax.imshow(cluster_mean_screen)
+        ax.set_title('Full cluster %d' % cluster_ind)
+        ax.axis('off')
+        for i,l in enumerate(self.smdp.skill_indices[cluster_ind]):
+            skill_mean_screen = calc_cluster_im(self,l)
+            subplot_ind = 445+i
+            ax = plt.subplot(subplot_ind)
+            ax.imshow(skill_mean_screen)
+            ax.set_title('Skill %d' %self.smdp.skill_list[cluster_ind][i])
+            ax.axis('off')
+def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, n_clusters, pi_analytic, d=30):
 
     def unite_trajs_mask(traj_list, traj_indices, n_points):
         unite_mask = np.zeros(n_points, dtype=bool)
@@ -149,21 +191,107 @@ def extermum_trajs_discrepency(traj_list, labels, termination, rewards, values, 
         reward[t_ind] = t['R']
 
     traj_order = np.argsort(reward)
-    bottom_trajs = traj_order[:k]
-    top_trajs = traj_order[-k:]
+    bottom_trajs = traj_order[:d]
+    top_trajs = traj_order[-d:]
     top_mask = unite_trajs_mask(traj_list, top_trajs, n_points)
     bottom_mask = unite_trajs_mask(traj_list, bottom_trajs, n_points)
 
-    top_model = SMDP(labels, termination[top_mask], rewards[top_mask], values[top_mask], n_clusters, gamma=0.99, trunc_th = 0.1)
-    bottom_model = SMDP(labels, termination[bottom_mask], rewards[bottom_mask], values[bottom_mask], n_clusters, gamma=0.99, trunc_th = 0.1)
+    top_model = SMDP(labels[top_mask], termination[top_mask], rewards[top_mask], values[top_mask], n_clusters, tb=1)
+    bottom_model = SMDP(labels[bottom_mask], termination[bottom_mask], rewards[bottom_mask], values[bottom_mask], n_clusters, tb=1)
 
-    cross_entropy = np.zeros(n_clusters)
+    # print 'top_model.n_clusters: %d' % top_model.n_clusters
+    # print 'bottom_model.n_clusters: %d' % bottom_model.n_clusters
+
+    # pi_empiric_1 = []
+    # pi_empiric_2 = []
+    # pi_empiric_3 = []
+    # for i,(p_top,p_bottom) in enumerate(zip(top_model.P,bottom_model.P)):
+    #     pi_empiric_1.append([i,np.argmax(p_top-p_bottom)])
+    #     pi_empiric_2.append([i,np.argmax(p_top)])
+    #     pi_empiric_3.append([i,np.argmax(p_bottom)])
+    #
+    # match_count_1 = 0
+    # match_count_2 = 0
+    # match_count_3 = 0
+    # for pi_e_1, pi_e_2, pi_e_3, pi_a in zip(pi_empiric_1, pi_empiric_2, pi_empiric_3, pi_analytic):
+    #     if pi_e_1[1]==pi_a[1]:
+    #         match_count_1 +=1
+    #     if pi_e_2[1]==pi_a[1]:
+    #         match_count_2 +=1
+    #     if pi_e_3[1]==pi_a[1]:
+    #         match_count_3 +=1
+    #
+    # print 'match_count_1: %d' % match_count_1
+    # print 'match_count_2: %d' % match_count_2
+    # print 'match_count_3: %d' % match_count_3
+
+    top_greedy_sum = 0
+    top_cluster_sum = 0
+    for i,pi in enumerate(top_model.P):
+        top_greedy_sum += pi[pi_analytic[i][1]]
+        if pi.sum()>0:
+            top_cluster_sum += 1
+
+    top_greedy_sum = top_greedy_sum / top_cluster_sum
+
+    bottom_greedy_sum = 0
+    bottom_cluster_sum = 0
+    for i,pi in enumerate(bottom_model.P):
+        bottom_greedy_sum += pi[pi_analytic[i][1]]
+        if pi.sum()>0:
+            bottom_cluster_sum += 1
+
+    bottom_greedy_sum = bottom_greedy_sum / bottom_cluster_sum
+
+    print 'd:%d' %d
+    print 'top_greedy_sum: %f' % top_greedy_sum
+    print 'bottom_greedy_sum: %f' % bottom_greedy_sum
+    print 'top_cluster clusters: %d' % top_cluster_sum
+    print 'bottom_cluster clusters: %d' % bottom_cluster_sum
+
+    tb_disc = np.zeros(n_clusters)
+    bt_disc = np.zeros(n_clusters)
     for c in xrange(n_clusters):
-        cross_entropy[c] = 0.5 * (scipy.stats.entropy(top_model.P[c], bottom_model.P[c]) + scipy.stats.entropy(bottom_model.P[c], top_model.P[c])) - \
-                           scipy.stats.entropy(top_model.P[c]) - scipy.stats.entropy(bottom_model.P[c])
+        tb_disc[c] = scipy.stats.entropy(top_model.P[c], bottom_model.P[c])
+        bt_disc[c] = scipy.stats.entropy(bottom_model.P[c], top_model.P[c])
+                           # - scipy.stats.entropy(top_model.P[c]) - scipy.stats.entropy(bottom_model.P[c])
 
-    return cross_entropy
+    result = {'top_model': top_model,
+                      'bottom_model': bottom_model,
+                      'tb_disc': tb_disc,
+                      'bt_disc': bt_disc,
+                      'top_greedy_sum': top_greedy_sum,
+                      'bottom_greedy_sum': bottom_greedy_sum,
+              }
+    return result
 
+def calc_cluster_im(self,indices):
+    screens = np.copy(self.screens[indices])
+    if self.game_id  == 2: #pacman
+        for s in screens:
+
+            enemies_map = 1 * (s[:,:,0] == 180) + \
+                          1 * (s[:,:,0] == 149) + \
+                          1 * (s[:,:,0] == 212) + \
+                          1 * (s[:,:,0] == 128) + \
+                          1 * (s[:,:,0] == 232) + \
+                          1 * (s[:,:,0] == 204)
+
+            enemies_mask = np.ones((210,160),dtype=bool)
+            enemies_mask[20:28,6:10] = 0
+            enemies_mask[140:148,6:10] = 0
+            enemies_mask[20:28,150:154] = 0
+            enemies_mask[140:148,150:154] = 0
+            enemies_map = enemies_map * enemies_mask
+            r_ch = s[:,:,0]
+            g_ch = s[:,:,1]
+            b_ch = s[:,:,2]
+            r_ch[np.nonzero(enemies_map)] = 45
+            g_ch[np.nonzero(enemies_map)] = 50
+            b_ch[np.nonzero(enemies_map)] = 184
+    meanscreen=np.mean(screens,axis=0)
+
+    return meanscreen
 #############################
 # 8. color outliers
 #############################
